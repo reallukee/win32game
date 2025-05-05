@@ -1,26 +1,16 @@
-#include <stdlib.h>
-#include <time.h>
-#include <windows.h>
+#include "main.h"
 
-HINSTANCE hInst;
-
-int playerX = 0;
-int playerY = 0;
-int foodX = 0;
-int foodY = 0;
-
-int APIENTRY        WinMain(HINSTANCE, HINSTANCE, LPWSTR, int);
-ATOM                MyRegisterClass(HINSTANCE);
-BOOL                InitInstance(HINSTANCE, int);
-LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-
-int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
+int WINAPI WinMain(
+    HINSTANCE hInstance,
+    HINSTANCE hPrevInstance,
+    LPSTR lpCmdLine,
+    int nCmdShow)
 {
-    srand(time(0));
-
     MyRegisterClass(hInstance);
 
-    if (!InitInstance(hInstance, nCmdShow))
+    BOOL initInstanceResult = InitInstance(hInstance, nCmdShow);
+
+    if (!initInstanceResult)
     {
         return FALSE;
     }
@@ -30,14 +20,15 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
     while (GetMessage(&msg, NULL, 0, 0))
     {
         TranslateMessage(&msg);
+
         DispatchMessage(&msg);
     }
 
     return (int)msg.wParam;
 }
 
-
-ATOM MyRegisterClass(HINSTANCE hInstance)
+ATOM MyRegisterClass(
+    HINSTANCE hInstance)
 {
     WNDCLASSEXW wcex;
 
@@ -47,33 +38,61 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.cbClsExtra     = 0;
     wcex.cbWndExtra     = 0;
     wcex.hInstance      = hInstance;
-    wcex.hIcon          = NULL;
+    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(101));
     wcex.hCursor        = LoadCursor(NULL, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW);
     wcex.lpszMenuName   = NULL;
-    wcex.lpszClassName  = L"Game";
+    wcex.lpszClassName  = L"Win32Game";
     wcex.hIconSm        = NULL;
 
-    return RegisterClassExW(&wcex);
+    return RegisterClassEx(&wcex);
 }
 
-
-BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
+BOOL InitInstance(
+    HINSTANCE hInstance,
+    int nCmdShow)
 {
+    DWORD dwStyle = WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_MINIMIZEBOX;
+
+    RECT rect = {
+        0,
+        0,
+        WINDOW_WIDTH,
+        WINDOW_HEIGHT,
+    };
+
+    AdjustWindowRect(&rect, dwStyle, FALSE);
+
+    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+    int x = (screenWidth - WINDOW_WIDTH) / 2;
+    int y = (screenHeight - WINDOW_HEIGHT) / 2;
+
     hInst = hInstance;
 
-    HWND hWnd = CreateWindow(
-        L"Game",
-        L"Game",
-        WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT,
-        CW_USEDEFAULT,
-        516,
-        539,
+    HWND hWnd = CreateWindowEx(
+        WS_EX_COMPOSITED,
+        L"Win32Game",
+        L"Win32Game",
+        dwStyle,
+        x,
+        y,
+        WINDOW_WIDTH,
+        WINDOW_HEIGHT,
         NULL,
         NULL,
         hInstance,
         NULL
+    );
+
+    BOOL value = TRUE;
+
+    DwmSetWindowAttribute(
+        hWnd,
+        DWMWA_USE_IMMERSIVE_DARK_MODE,
+        &value,
+        sizeof(value)
     );
 
     if (!hWnd)
@@ -82,157 +101,73 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
     }
 
     ShowWindow(hWnd, nCmdShow);
+
     UpdateWindow(hWnd);
 
     return TRUE;
 }
 
-
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK WndProc(
+    HWND hWnd,
+    UINT message,
+    WPARAM wParam,
+    LPARAM lParam)
 {
     switch (message)
     {
     case WM_CREATE:
-        playerX = rand() % 10;
-        playerY = rand() % 10;
-
-        while (foodX == playerX)
-        {
-            foodX = rand() % 10;
-        }
-
-        while (foodY == playerY)
-        {
-            foodY = rand() % 10;
-        }
-
-        long wndLong = GetWindowLong(hWnd, GWL_STYLE);
-        SetWindowLong(hWnd, GWL_STYLE, wndLong & ~WS_MINIMIZEBOX & ~WS_MAXIMIZEBOX);
+        InitGame(hWnd);
 
         break;
-
-    case WM_GETMINMAXINFO:
-    {
-        MINMAXINFO* mmi = (MINMAXINFO*)lParam;
-
-        mmi->ptMinTrackSize.x = 516;
-        mmi->ptMinTrackSize.y = 539;
-        mmi->ptMaxTrackSize.x = 516;
-        mmi->ptMaxTrackSize.y = 539;
-    }
-
-    break;
 
     case WM_DESTROY:
         PostQuitMessage(0);
 
         break;
 
+    case WM_GETMINMAXINFO:
+    {
+        MINMAXINFO* pInfo = (MINMAXINFO*)lParam;
+
+        pInfo->ptMinTrackSize.x = WINDOW_WIDTH;
+        pInfo->ptMinTrackSize.y = WINDOW_HEIGHT;
+        pInfo->ptMaxTrackSize.x = WINDOW_WIDTH;
+        pInfo->ptMaxTrackSize.y = WINDOW_HEIGHT;
+    }
+
+    break;
+
     case WM_PAINT:
-        PAINTSTRUCT ps;
-        HDC hdc = BeginPaint(hWnd, &ps);
-        RECT rect;
+    {
+        PAINTSTRUCT lpPaint;
 
-        FillRect(hdc, &ps.rcPaint, CreateSolidBrush(RGB(0, 255, 0)));
+        HDC hDC = BeginPaint(hWnd, &lpPaint);
 
-        rect.left   = playerX * 50;
-        rect.top    = playerY * 50;
-        rect.right  = playerX * 50 + 50;
-        rect.bottom = playerY * 50 + 50;
-        FillRect(hdc, &rect, CreateSolidBrush(RGB(255, 0, 0)));
+        DrawField(hDC);
+        DrawPlayer(hDC);
+        DrawPlayerFood(hDC);
 
-        rect.left   = foodX * 50;
-        rect.top    = foodY * 50;
-        rect.right  = foodX * 50 + 50;
-        rect.bottom = foodY * 50 + 50;
-        FillRect(hdc, &rect, CreateSolidBrush(RGB(0, 0, 255)));
+        EndPaint(hWnd, &lpPaint);
+    }
 
-        EndPaint(hWnd, &ps);
-
-        break;
+    break;
 
     case WM_KEYDOWN:
-        switch (wParam)
-        {
-        case 'W':
-        case 'w':
-        case VK_UP:
-            if (playerY - 1 >= 0)
-            {
-                playerY--;
-            }
-            else
-            {
-                playerY = 9;
-            }
+        HandleInput(hWnd, wParam);
 
-            break;
-
-        case 'S':
-        case 's':
-        case VK_DOWN:
-            if (playerY + 1 <= 9)
-            {
-                playerY++;
-            }
-            else
-            {
-                playerY = 0;
-            }
-
-            break;
-
-        case 'A':
-        case 'a':
-        case VK_LEFT:
-            if (playerX - 1 >= 0)
-            {
-                playerX--;
-            }
-            else
-            {
-                playerX = 9;
-            }
-
-            break;
-
-        case 'D':
-        case 'd':
-        case VK_RIGHT:
-            if (playerX + 1 <= 9)
-            {
-                playerX++;
-            }
-            else
-            {
-                playerX = 0;
-            }
-
-            break;
-
-        default:
-            break;
-        }
+        MovePlayer();
 
         InvalidateRect(hWnd, NULL, FALSE);
-
-        if (playerX == foodX && playerY == foodY)
-        {
-            while (foodX == playerX)
-            {
-                foodX = rand() % 10;
-            }
-
-            while (foodY == playerY)
-            {
-                foodY = rand() % 10;
-            }
-        }
 
         break;
 
     default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
+        return DefWindowProc(
+            hWnd,
+            message,
+            wParam,
+            lParam
+        );
     }
 
     return 0;
