@@ -15,7 +15,9 @@ POINT playerFood;
 
 void InitGame(HWND hWnd);
 
-void HandleInput(HWND hWnd, WPARAM wParam);
+void HandleInput(
+    HWND hWnd,
+    WPARAM wParam);
 
 void GeneratePlayer();
 void GeneratePlayerFood();
@@ -24,6 +26,6 @@ void DrawField(HDC hDC);
 void DrawPlayer(HDC hDC);
 void DrawPlayerFood(HDC hDC);
 
-BOOL MovePlayer();
+void MovePlayer();
 
 #endif // !GAME_H

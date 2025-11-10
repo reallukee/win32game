@@ -15,7 +15,9 @@ void InitGame(HWND hWnd)
 
 
 
-void HandleInput(HWND hWnd, WPARAM wParam)
+void HandleInput(
+    HWND hWnd,
+    WPARAM wParam)
 {
     switch (wParam)
     {
@@ -84,21 +86,30 @@ void HandleInput(HWND hWnd, WPARAM wParam)
 
 void GeneratePlayer()
 {
-    player.x = rand() % COLS_COUNT;
-    player.y = rand() % ROWS_COUNT;
+    player = (POINT){
+        .x = rand() % COLS_COUNT,
+        .y = rand() % ROWS_COUNT,
+    };
 }
 
 void GeneratePlayerFood()
 {
-    do
-    {
-        playerFood.x = rand() % COLS_COUNT;
-    } while (playerFood.x == player.x);
+    BOOL check = TRUE;
 
     do
     {
-        playerFood.y = rand() % ROWS_COUNT;
-    } while (playerFood.y == player.y);
+        check = TRUE;
+
+        playerFood = (POINT){
+            .x = rand() % COLS_COUNT,
+            .y = rand() % ROWS_COUNT,
+        };
+
+        if (player.x == playerFood.x && player.y == playerFood.y)
+        {
+            check = FALSE;
+        }
+    } while (!check);
 }
 
 
@@ -118,27 +129,13 @@ void DrawField(HDC hDC)
 
             HBRUSH hbr;
 
-            if (y % 2 == 0)
+            if ((x + y) % 2 == 0)
             {
-                if (x % 2 == 0)
-                {
-                    hbr = CreateSolidBrush(RGB(125, 250, 0));
-                }
-                else
-                {
-                    hbr = CreateSolidBrush(RGB(175, 255, 45));
-                }
+                hbr = CreateSolidBrush(RGB(125, 250, 0));
             }
             else
             {
-                if (x % 2 == 0)
-                {
-                    hbr = CreateSolidBrush(RGB(175, 255, 45));
-                }
-                else
-                {
-                    hbr = CreateSolidBrush(RGB(125, 250, 0));
-                }
+                hbr = CreateSolidBrush(RGB(175, 255, 45));
             }
 
             FillRect(hDC, &lprc, hbr);
@@ -182,7 +179,7 @@ void DrawPlayerFood(HDC hDC)
 
 
 
-BOOL MovePlayer()
+void MovePlayer()
 {
     if (player.x == playerFood.x && player.y == playerFood.y)
     {
